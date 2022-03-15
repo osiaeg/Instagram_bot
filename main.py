@@ -6,11 +6,20 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 import requests
 import time
+from tqdm import tqdm
 
-def download_file(url, file_name):
-    local_filename = file_name
+class Video:
+
+    def __init__(self, name: str, src: str, link: str) -> None:
+        self.name = name
+        self.src = src
+        self.link = link
+
+
+def download_file(url, file_name) -> str:
+    local_filename = f'videos/{file_name}'
     # NOTE the stream=True parameter below
-    with requests.get(url, stream=False) as r:
+    with requests.get(url, stream=True) as r:
         r.raise_for_status()
         with open(local_filename, 'wb') as f:
             for chunk in r.iter_content(chunk_size=8192):
@@ -37,26 +46,34 @@ try:
 
     actions = ActionChains(driver)
 
-    for _ in range(5):
+    video_collection = []
+    for i in range(40):
         video = driver.find_element(By.TAG_NAME, 'video')
+        like_count = driver.find_elements(By.XPATH, "//strong[@data-e2e='like-count']")
+        comment_count = driver.find_elements(By.XPATH, "//strong[@data-e2e='comment-count']")
+        share_count = driver.find_elements(By.XPATH, "//strong[@data-e2e='share-count']")
+
         src = video.get_attribute('src')
-        print(src)
         video.click()
+
         time.sleep(2)
         link = driver.find_element(
                 By.XPATH,
                 '/html/body/div[2]/div[2]/div[3]/div[2]/div[2]/div[2]/div[2]/p'
                 ).text
-        print(link)
+
         actions.pause(0.5)
         actions.send_keys(Keys.ESCAPE)
         actions.send_keys(Keys.ARROW_DOWN)
         actions.perform()
+        video_collection.append(Video(f'tiktok_{i}.mp4', src, link))
         time.sleep(3)
 
-    url = 'https://v16-webapp.tiktok.com/61ced3b5b6518e7c893109ca9bf7dcca/6230b0c1/video/tos/alisg/tos-alisg-pve-0037c001/bdc6d75e8ffd4fcabfb3e23c6353de9d/?a=1988&br=930&bt=465&cd=0%7C0%7C1%7C0&ch=0&cr=0&cs=0&cv=1&dr=0&ds=3&er=&ft=XOQ9-3Fenz7ThD-wiDXq&l=202203150928580102440492151028E759&lr=tiktok_m&mime_type=video_mp4&net=0&pl=0&qs=0&rc=ajx2ZTo6ZnhsOzMzODczNEApNjw4ZzZkMzxpN2ZmaTU1NmdfZGozcjRfbzFgLS1kMS1zczZfYzUwM19hX19eLWE0MjM6Yw%3D%3D&vl=&vr='
-    download_file(url, 'video_1.mp4')
-    print("Video is downloaded.")
+    for video in tqdm(video_collection):
+        download_file(video.src, video.name)
+
+    print('Download complete.')
+
     input()
 except Exception as e:
     print(e)
